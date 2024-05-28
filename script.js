@@ -16,7 +16,18 @@ function calculateLoan() {
     const loanPeriod = parseInt(document.getElementById("loanPeriod").value);
     const loanStartDate = document.getElementById("loanStartDate").value;
 
-    const remainingAmount = loanAmount - initialPayment - finalPayment - capitalPayment;
+    // Calcular la suma de las cuotas pagadas
+    let paidInstallmentsSum = 0;
+    const tableBody = document.getElementById("paymentTableBody");
+    const rows = Array.from(tableBody.rows);
+    rows.forEach(row => {
+        const checkbox = row.cells[3].querySelector('input');
+        if (checkbox && checkbox.checked) {
+            paidInstallmentsSum += parseFloat(row.cells[1].textContent.replace(/[^0-9.-]+/g,""));
+        }
+    });
+
+    const remainingAmount = loanAmount - initialPayment - finalPayment - capitalPayment - paidInstallmentsSum;
     const monthlyPayment = remainingAmount / loanPeriod;
     const initialPaymentPercentage = (initialPayment / loanAmount) * 100 || 0;
     const totalLoan = loanAmount;
@@ -30,7 +41,6 @@ function calculateLoan() {
     document.getElementById("summaryTotalLoan").textContent = formatNumber(totalLoan.toFixed(2)) + ' COP';
 
     // Actualizar la tabla de pagos
-    const tableBody = document.getElementById("paymentTableBody");
     tableBody.innerHTML = '';
     let currentDate = new Date(loanStartDate);
     for (let i = 1; i <= loanPeriod; i++) {
@@ -42,8 +52,9 @@ function calculateLoan() {
         const paymentCell = newRow.insertCell(3);
         const paymentCheckbox = document.createElement('input');
         paymentCheckbox.type = 'checkbox';
-        paymentCheckbox.addEventListener('change', () => {
-            if (paymentCheckbox.checked) {
+        paymentCheckbox.addEventListener('change', function() {
+            // Recalcular al cambiar el estado del pago
+            if (this.checked) {
                 newRow.classList.add('paid');
             } else {
                 newRow.classList.remove('paid');
@@ -55,8 +66,6 @@ function calculateLoan() {
 
 // Función para exportar la tabla a Excel
 function exportToExcel() {
-    const tableBody = document.getElementById("paymentTableBody");
-    const rows = Array.from(tableBody.rows);
     const fullName = document.getElementById("fullName").value;
     const idNumber = document.getElementById("idNumber").value;
     const summaryMonthlyPayment = document.getElementById("summaryMonthlyPayment").textContent;
@@ -68,6 +77,9 @@ function exportToExcel() {
     const initialPayment = parseFloat(document.getElementById("initialPayment").value) || 0;
     const finalPayment = parseFloat(document.getElementById("finalPayment").value) || 0;
     const capitalPayment = parseFloat(document.getElementById("capitalPayment").value) || 0;
+
+    const tableBody = document.getElementById("paymentTableBody");
+    const rows = Array.from(tableBody.rows);
 
     const worksheetData = [
         ["Nombre del Cliente", fullName],
@@ -109,37 +121,23 @@ function importFromExcel(event) {
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        const [header, ...rows] = jsonData;
-
-        const fullName = rows[0][1];
-        const idNumber = rows[1][1];
-        const monthlyPayment = rows[2][1];
-        const installments = rows[3][1];
-        const initialPaymentPercentage = rows[4][1];
-        const totalLoan = rows[5][1];
-        const initialPayment = parseFloat(rows[6][1].replace(/[^0-9.-]+/g,""));
-        const finalPayment = parseFloat(rows[7][1].replace(/[^0-9.-]+/g,""));
-        const capitalPayment = parseFloat(rows[8][1].replace(/[^0-9.-]+/g,""));
-
-        document.getElementById("fullName").value = fullName;
-        document.getElementById("idNumber").value = idNumber;
-
-        document.getElementById("summaryFullName").textContent = fullName;
-        document.getElementById("summaryIdNumber").textContent = idNumber;
-        document.getElementById("summaryMonthlyPayment").textContent = monthlyPayment;
-        document.getElementById("summaryInstallments").textContent = installments;
-        document.getElementById("summaryInitialPaymentPercentage").textContent = initialPaymentPercentage;
-        document.getElementById("summaryTotalLoan").textContent = totalLoan;
-
-        document.getElementById("initialPayment").value = initialPayment;
-        document.getElementById("finalPayment").value = finalPayment;
-        document.getElementById("capitalPayment").value = capitalPayment;
+        // Asignar los datos importados a los campos correspondientes
+        document.getElementById("fullName").value = jsonData[0][1];
+        document.getElementById("idNumber").value = jsonData[1][1];
+        document.getElementById("summaryMonthlyPayment").textContent = jsonData[2][1];
+        document.getElementById("summaryInstallments").textContent = jsonData[3][1];
+        document.getElementById("summaryInitialPaymentPercentage").textContent = jsonData[4][1];
+        document.getElementById("summaryTotalLoan").textContent = jsonData[5][1];
+        document.getElementById("loanAmount").value = parseFloat(jsonData[5][1].replace(/[^0-9.-]+/g,""));
+        document.getElementById("initialPayment").value = parseFloat(jsonData[6][1].replace(/[^0-9.-]+/g,""));
+        document.getElementById("finalPayment").value = parseFloat(jsonData[7][1].replace(/[^0-9.-]+/g,""));
+        document.getElementById("capitalPayment").value = parseFloat(jsonData[8][1].replace(/[^0-9.-]+/g,""));
 
         const tableBody = document.getElementById("paymentTableBody");
-        tableBody.innerHTML = '';
+        const existingRowsCount = tableBody.rows.length - 1;
 
-        rows.slice(10).forEach(row => {
-            const newRow = tableBody.insertRow();
+        jsonData.slice(10).forEach((row, index) => {
+            const newRow = tableBody.insertRow(existingRowsCount + index);
             newRow.insertCell(0).textContent = row[0];
             newRow.insertCell(1).textContent = row[1];
             newRow.insertCell(2).textContent = row[2];
@@ -150,8 +148,9 @@ function importFromExcel(event) {
             if (paymentCheckbox.checked) {
                 newRow.classList.add('paid');
             }
-            paymentCheckbox.addEventListener('change', () => {
-                if (paymentCheckbox.checked) {
+            paymentCheckbox.addEventListener('change', function() {
+                // Recalcular al cambiar el estado del pago
+                if (this.checked) {
                     newRow.classList.add('paid');
                 } else {
                     newRow.classList.remove('paid');
@@ -162,3 +161,61 @@ function importFromExcel(event) {
     };
     reader.readAsArrayBuffer(file);
 }
+
+// Función para agregar saldo al capital
+function addCapital() {
+    const capitalInput = parseFloat(document.getElementById("capitalInput").value);
+    const tableBody = document.getElementById("paymentTableBody");
+    const rows = Array.from(tableBody.rows);
+    let paidInstallmentsSum = 0;
+    rows.forEach(row => {
+        const checkbox = row.cells[3].querySelector('input');
+        if (checkbox && checkbox.checked) {
+            paidInstallmentsSum += parseFloat(row.cells[1].textContent.replace(/[^0-9.-]+/g,""));
+        }
+    });
+    const remainingAmount = loanAmount - initialPayment - finalPayment - paidInstallmentsSum;
+    const newRemainingAmount = remainingAmount + capitalInput;
+    const newMonthlyPayment = newRemainingAmount / loanPeriod;
+    const currentDate = new Date(document.getElementById("loanStartDate").value);
+    for (let i = 1; i <= loanPeriod; i++) {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        const row = tableBody.rows[i - 1];
+        const monthlyPaymentCell = row.cells[1];
+        monthlyPaymentCell.textContent = formatNumber(newMonthlyPayment.toFixed(2)) + ' COP';
+    }
+}
+// Función para limpiar todos los campos del formulario y la tabla de pagos
+function refreshForm() {
+    // Limpiar campos del formulario
+    document.getElementById("fullName").value = "";
+    document.getElementById("idNumber").value = "";
+    document.getElementById("phone").value = "";
+    document.getElementById("loanAmount").value = "";
+    document.getElementById("initialPayment").value = "";
+    document.getElementById("finalPayment").value = "";
+    document.getElementById("capitalPayment").value = "";
+    document.getElementById("loanPeriod").value = "";
+    document.getElementById("loanStartDate").value = "";
+
+    // Limpiar resumen de compra
+    document.getElementById("summaryFullName").textContent = "";
+    document.getElementById("summaryIdNumber").textContent = "";
+    document.getElementById("summaryMonthlyPayment").textContent = "";
+    document.getElementById("summaryInstallments").textContent = "";
+    document.getElementById("summaryInitialPaymentPercentage").textContent = "";
+    document.getElementById("summaryTotalLoan").textContent = "";
+
+    // Limpiar tabla de pagos
+    const tableBody = document.getElementById("paymentTableBody");
+    tableBody.innerHTML = "";
+}
+
+// Asignar evento al botón de refrescar
+document.getElementById("refreshButton").addEventListener("click", refreshForm);
+
+
+// Asignar eventos a los botones
+document.getElementById("importButton").addEventListener("change", importFromExcel);
+document.getElementById("exportButton").addEventListener("click", exportToExcel);
+document.getElementById("addCapitalButton").addEventListener("click", addCapital);
