@@ -19,7 +19,7 @@ function calculateLoan() {
     const remainingAmount = loanAmount - initialPayment - finalPayment - capitalPayment;
     const monthlyPayment = remainingAmount / loanPeriod;
     const initialPaymentPercentage = (initialPayment / loanAmount) * 100 || 0;
-    const totalLoan = loanAmount + (monthlyPayment * loanPeriod);
+    const totalLoan = loanAmount;
 
     // Actualizar el resumen de compra
     document.getElementById("summaryFullName").textContent = fullName;
@@ -57,22 +57,40 @@ function calculateLoan() {
 function exportToExcel() {
     const tableBody = document.getElementById("paymentTableBody");
     const rows = Array.from(tableBody.rows);
-    const data = rows.map(row => {
-        return [
+    const fullName = document.getElementById("fullName").value;
+    const idNumber = document.getElementById("idNumber").value;
+    const summaryMonthlyPayment = document.getElementById("summaryMonthlyPayment").textContent;
+    const summaryInstallments = document.getElementById("summaryInstallments").textContent;
+    const summaryInitialPaymentPercentage = document.getElementById("summaryInitialPaymentPercentage").textContent;
+    const summaryTotalLoan = document.getElementById("summaryTotalLoan").textContent;
+
+    const loanAmount = parseFloat(document.getElementById("loanAmount").value);
+    const initialPayment = parseFloat(document.getElementById("initialPayment").value) || 0;
+    const finalPayment = parseFloat(document.getElementById("finalPayment").value) || 0;
+    const capitalPayment = parseFloat(document.getElementById("capitalPayment").value) || 0;
+
+    const worksheetData = [
+        ["Nombre del Cliente", fullName],
+        ["Número de Identificación", idNumber],
+        ["Pago Mensual", summaryMonthlyPayment],
+        ["Número de Cuotas", summaryInstallments],
+        ["Porcentaje de Cuota Inicial", summaryInitialPaymentPercentage],
+        ["Valor Total del Préstamo", summaryTotalLoan],
+        ["Cuota Inicial", formatNumber(initialPayment.toFixed(2)) + ' COP'],
+        ["Cuota Final", formatNumber(finalPayment.toFixed(2)) + ' COP'],
+        ["Valor a Capital", formatNumber(capitalPayment.toFixed(2)) + ' COP'],
+        [],
+        ["Número de Cuota", "Valor de la Cuota", "Fecha Límite de Pago", "Estado"]
+    ];
+
+    rows.forEach(row => {
+        worksheetData.push([
             row.cells[0].textContent,
             row.cells[1].textContent,
             row.cells[2].textContent,
             row.cells[3].querySelector('input').checked ? 1 : 0
-        ];
+        ]);
     });
-
-    const fullName = document.getElementById("fullName").value;
-    const idNumber = document.getElementById("idNumber").value;
-
-    const worksheetData = [
-        ["Nombre del Cliente", "Número de Identificación", "Número de Cuotas", "Valor de la Cuota", "Fecha Límite de Pago", "Estado"],
-        ...data
-    ];
 
     const ws = XLSX.utils.aoa_to_sheet(worksheetData);
     const wb = XLSX.utils.book_new();
@@ -93,15 +111,34 @@ function importFromExcel(event) {
 
         const [header, ...rows] = jsonData;
 
-        if (header[0] !== "Nombre del Cliente" || header[1] !== "Número de Identificación") {
-            alert("El formato del archivo no es correcto.");
-            return;
-        }
+        const fullName = rows[0][1];
+        const idNumber = rows[1][1];
+        const monthlyPayment = rows[2][1];
+        const installments = rows[3][1];
+        const initialPaymentPercentage = rows[4][1];
+        const totalLoan = rows[5][1];
+        const initialPayment = parseFloat(rows[6][1].replace(/[^0-9.-]+/g,""));
+        const finalPayment = parseFloat(rows[7][1].replace(/[^0-9.-]+/g,""));
+        const capitalPayment = parseFloat(rows[8][1].replace(/[^0-9.-]+/g,""));
+
+        document.getElementById("fullName").value = fullName;
+        document.getElementById("idNumber").value = idNumber;
+
+        document.getElementById("summaryFullName").textContent = fullName;
+        document.getElementById("summaryIdNumber").textContent = idNumber;
+        document.getElementById("summaryMonthlyPayment").textContent = monthlyPayment;
+        document.getElementById("summaryInstallments").textContent = installments;
+        document.getElementById("summaryInitialPaymentPercentage").textContent = initialPaymentPercentage;
+        document.getElementById("summaryTotalLoan").textContent = totalLoan;
+
+        document.getElementById("initialPayment").value = initialPayment;
+        document.getElementById("finalPayment").value = finalPayment;
+        document.getElementById("capitalPayment").value = capitalPayment;
 
         const tableBody = document.getElementById("paymentTableBody");
         tableBody.innerHTML = '';
 
-        rows.forEach(row => {
+        rows.slice(10).forEach(row => {
             const newRow = tableBody.insertRow();
             newRow.insertCell(0).textContent = row[0];
             newRow.insertCell(1).textContent = row[1];
