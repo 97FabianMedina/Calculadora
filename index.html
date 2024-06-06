@@ -32,6 +32,24 @@
             <p>Número de Cuotas: <span id="summaryInstallments"></span></p>
             <p>Porcentaje de Cuota Inicial: <span id="summaryInitialPaymentPercentage"></span></p>
             <p>Valor Total del Préstamo: <span id="summaryTotalLoan"></span></p>
+            <h2>Cuotas Diferente Valor</h2>
+            <div class="form-group">
+                <label for="currentInstallment">Cuota Actual:</label>
+                <input type="number" id="currentInstallment" oninput="calculateTotal()">
+            </div>
+            <div class="form-group">
+                <label for="numberOfInstallments">Número de Cuotas:</label>
+                <input type="number" id="numberOfInstallments" oninput="calculateTotal()">
+            </div>
+            <div class="form-group">
+                <label for="installmentToPay">Cuota a Pagar:</label>
+                <input type="number" id="installmentToPay" oninput="calculateTotal()">
+            </div>
+            <div class="form-group">
+                <label for="total">Total:</label>
+                <input type="text" id="total" readonly>
+            </div>
+
         </div>
         <div class="right-section">
             <h2>Calculadora de Préstamo</h2>
@@ -49,7 +67,7 @@
             </div>
             <div class="form-group">
                 <label for="capitalPayment">Valor a Capital:</label>
-                <input type="number" id="capitalPayment" disabled placeholder="Desabilitado">
+                <input type="number" id="capitalPayment">
             </div>
             <div class="form-group">
                 <label for="loanPeriod">Periodo de Préstamo (meses):</label>
@@ -77,6 +95,7 @@
             </table>
         </div>
     </div>
+
     <div class="pagina">
         <div class="pie">2024 &copy; William Fabian Medina</div>   
     </div>
