@@ -203,32 +203,36 @@ function importFromExcel(event) {
         document.getElementById("capitalPayment").value = parseFloat(jsonData[8][1].replace(/[^0-9.-]+/g,""));
 
         const tableBody = document.getElementById("paymentTableBody");
-        const existingRowsCount = tableBody.rows.length - 1;
+        tableBody.innerHTML = ''; // Limpiar la tabla antes de importar nuevos datos
 
         jsonData.slice(10).forEach((row, index) => {
-            const newRow = tableBody.insertRow(existingRowsCount + index);
-            newRow.insertCell(0).textContent = row[0];
-            newRow.insertCell(1).textContent = row[1];
-            newRow.insertCell(2).textContent = row[2];
-            const paymentCell = newRow.insertCell(3);
-            const paymentCheckbox = document.createElement('input');
-            paymentCheckbox.type = 'checkbox';
-            paymentCheckbox.checked = row[3] === 1;
-            if (paymentCheckbox.checked) {
-                newRow.classList.add('paid');
-            }
-            paymentCheckbox.addEventListener('change', function() {
-                if (this.checked) {
+            // Verificar si la fila contiene el encabezado
+            if (row[0] !== "Número de Cuota" && row[1] !== "Valor de la Cuota" && row[2] !== "Fecha Límite de Pago" && row[3] !== "Pago Realizado") {
+                const newRow = tableBody.insertRow();
+                newRow.insertCell(0).textContent = row[0];
+                newRow.insertCell(1).textContent = row[1];
+                newRow.insertCell(2).textContent = row[2];
+                const paymentCell = newRow.insertCell(3);
+                const paymentCheckbox = document.createElement('input');
+                paymentCheckbox.type = 'checkbox';
+                paymentCheckbox.checked = row[3] === 1;
+                if (paymentCheckbox.checked) {
                     newRow.classList.add('paid');
-                } else {
-                    newRow.classList.remove('paid');
                 }
-            });
-            paymentCell.appendChild(paymentCheckbox);
+                paymentCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        newRow.classList.add('paid');
+                    } else {
+                        newRow.classList.remove('paid');
+                    }
+                });
+                paymentCell.appendChild(paymentCheckbox);
+            }
         });
     };
     reader.readAsArrayBuffer(file);
 }
+
 
 // Función para refrescar el formulario
 function refreshForm() {
